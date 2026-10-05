@@ -802,6 +802,26 @@ document.addEventListener('DOMContentLoaded', () => {
       floatingQrcodeBox.innerHTML = '';
       new QRCode(floatingQrcodeBox, { text: joinUrl, width: 100, height: 100 });
     }
+
+    // 교사 모드 접속 시 화면 상단 구석 플로팅 QR 뱃지 상시 활성화
+    if (stateStore.role === 'TEACHER' && floatingQrBadge) {
+      floatingQrBadge.classList.remove('hidden');
+    }
+  }
+
+  const btnToggleQrSize = document.getElementById('btn-toggle-qr-size');
+  if (btnToggleQrSize) {
+    btnToggleQrSize.onclick = () => {
+      soundEngine.playClickPing();
+      if (qrModal) qrModal.classList.remove('hidden');
+    };
+  }
+
+  if (floatingQrcodeBox) {
+    floatingQrcodeBox.onclick = () => {
+      soundEngine.playClickPing();
+      if (qrModal) qrModal.classList.remove('hidden');
+    };
   }
 
   const btnCopyJoinUrl = document.getElementById('btn-copy-join-url');

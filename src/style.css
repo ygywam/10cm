@@ -85,16 +85,16 @@ body, html {
 
 /* 화면 상단 좌측 구석 플로팅 QR 뱃지 박스 */
 .floating-qr-badge {
-  position: absolute;
+  position: fixed;
   top: 16px;
   left: 16px;
-  z-index: 95;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(6px);
+  z-index: 9999;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
   border: 2.5px solid var(--primary-gold);
   border-radius: 16px;
   padding: 10px 12px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
   display: flex;
   flex-direction: column;
   align-items: center;
