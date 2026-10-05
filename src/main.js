@@ -789,6 +789,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 호스트 도메인 자동 반영 (Vercel 및 웹주소 100% 호환)
     const joinUrl = window.location.protocol + '//' + window.location.host + window.location.pathname + '?room=' + stateStore.roomId;
 
+    const modalJoinUrlInput = document.getElementById('modal-join-url-input');
+    if (modalJoinUrlInput) modalJoinUrlInput.value = joinUrl;
+
     const qrBox = document.getElementById('qrcode-box');
     if (qrBox && typeof QRCode !== 'undefined') {
       qrBox.innerHTML = '';
@@ -799,6 +802,41 @@ document.addEventListener('DOMContentLoaded', () => {
       floatingQrcodeBox.innerHTML = '';
       new QRCode(floatingQrcodeBox, { text: joinUrl, width: 100, height: 100 });
     }
+  }
+
+  const btnCopyJoinUrl = document.getElementById('btn-copy-join-url');
+  if (btnCopyJoinUrl) {
+    btnCopyJoinUrl.onclick = () => {
+      const input = document.getElementById('modal-join-url-input');
+      const textToCopy = input ? input.value : (window.location.protocol + '//' + window.location.host + window.location.pathname + '?room=' + stateStore.roomId);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textToCopy).then(() => {
+          soundEngine.playClickPing();
+          alert('📋 학생 전용 접속 주소가 복사되었습니다!\n카카오톡이나 문자메시지에 붙여넣어 학생들에게 보내주세요.');
+        }).catch(() => {
+          prompt('📋 아래 학생 전용 접속 주소를 복사하세요:', textToCopy);
+        });
+      } else {
+        prompt('📋 아래 학생 전용 접속 주소를 복사하세요:', textToCopy);
+      }
+    };
+  }
+
+  const btnCopyFloatingUrl = document.getElementById('btn-copy-floating-url');
+  if (btnCopyFloatingUrl) {
+    btnCopyFloatingUrl.onclick = () => {
+      const joinUrl = window.location.protocol + '//' + window.location.host + window.location.pathname + '?room=' + stateStore.roomId;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(joinUrl).then(() => {
+          soundEngine.playClickPing();
+          alert('📋 학생 전용 접속 주소가 복사되었습니다!\n카카오톡이나 문자메시지에 붙여넣어 학생들에게 전송하세요.');
+        }).catch(() => {
+          prompt('📋 아래 접속 주소를 복사하세요:', joinUrl);
+        });
+      } else {
+        prompt('📋 아래 접속 주소를 복사하세요:', joinUrl);
+      }
+    };
   }
 
   if (btnAddQuiz) {

@@ -31,6 +31,7 @@
       <div class="floating-room-info">
         방 코드: <strong id="floating-room-code">-</strong>
       </div>
+      <button id="btn-copy-floating-url" class="tiny-btn" style="width: 100%; margin-top: 4px; background: #2563eb; font-size: 11px;">📋 접속주소 복사</button>
     </div>
 
     <!-- 평소에는 숨겨져 있고 필요할 때 슥 당겨 쓰는 슬라이드 메뉴 서랍 (Sliding Drawer) -->
@@ -124,8 +125,15 @@
         <div style="margin: 18px auto; padding: 16px; background: #ffffff; display: inline-block; border-radius: 16px; border: 3px solid #d97706;">
           <div id="qrcode-box"></div>
         </div>
-        <div style="font-weight: bold; color: #b45309; font-size: 16px; margin-bottom: 14px;">
+        <div style="font-weight: bold; color: #b45309; font-size: 16px; margin-bottom: 10px;">
           방 코드: <span id="modal-room-code" style="color: #2563eb; font-size: 20px;">-</span>
+        </div>
+        <div style="margin: 10px 0 16px 0; background: #fffbe0; border: 1.5px solid #f59e0b; border-radius: 12px; padding: 10px; text-align: left;">
+          <label style="font-size: 12px; font-weight: bold; color: #b45309; display: block; margin-bottom: 4px;">🔗 학생 전용 직접 접속 링크 (카톡/문자 전파용)</label>
+          <div style="display: flex; gap: 6px;">
+            <input type="text" id="modal-join-url-input" readonly style="flex: 1; padding: 6px 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; background: #ffffff; color: #1c1917;" value="">
+            <button id="btn-copy-join-url" class="tiny-btn" style="background: #2563eb; padding: 6px 12px; font-size: 12px; font-weight: bold; white-space: nowrap;">📋 주소 복사</button>
+          </div>
         </div>
         <button id="btn-close-qr" class="primary-btn">닫기</button>
       </div>
