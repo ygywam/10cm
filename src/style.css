@@ -25,9 +25,15 @@ body, html {
 }
 
 #game-container {
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
+  height: -webkit-fill-available;
   overflow: hidden;
 }
 
@@ -144,32 +150,34 @@ body, html {
   color: var(--text-main);
 }
 
-/* 모바일 가상 조이스틱 패드 */
+/* 모바일 가상 조이스틱 패드 (아이폰 iOS 노치/하단 바 safe-area-inset 여백 완벽 교정) */
 .joystick-wrapper {
-  position: absolute;
-  bottom: 24px;
-  left: 24px;
-  width: 120px;
-  height: 120px;
-  z-index: 90;
+  position: fixed;
+  bottom: max(75px, calc(env(safe-area-inset-bottom) + 65px));
+  left: max(36px, calc(env(safe-area-inset-left) + 24px));
+  width: 130px;
+  height: 130px;
+  z-index: 9999;
   display: none;
   align-items: center;
   justify-content: center;
   touch-action: none;
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 
 .joystick-base {
   width: 110px;
   height: 110px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.4);
-  border: 3px solid rgba(180, 83, 9, 0.6);
-  backdrop-filter: blur(4px);
+  background: rgba(255, 255, 255, 0.55);
+  border: 3.5px solid rgba(180, 83, 9, 0.8);
+  backdrop-filter: blur(6px);
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
 }
 
 .joystick-stick {
@@ -177,8 +185,8 @@ body, html {
   height: 48px;
   border-radius: 50%;
   background: linear-gradient(135deg, #f59e0b, #b45309);
-  border: 2px solid #ffffff;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.35);
   position: absolute;
   top: 50%;
   left: 50%;

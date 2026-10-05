@@ -322,10 +322,11 @@ class SoundEngine {
 
 const soundEngine = new SoundEngine();
 
-// --- 파이어베이스 & PeerJS 이중 하이브리드 동기화 엔진 ---
+// --- 파이어베이스 SSE 스트리밍 & 실시간 다중 동기화 엔진 ---
 class RealtimeSyncEngine {
   constructor() {
     this.lastSyncTime = 0;
+    this.eventSource = null;
     this.startListening();
   }
 
@@ -357,9 +358,74 @@ class RealtimeSyncEngine {
       .catch(err => {});
   }
 
+  updateRemotePlayerState(id, newData) {
+    if (!newData || typeof newData !== 'object') return;
+    if (!stateStore.remotePlayers[id]) {
+      stateStore.remotePlayers[id] = {
+        ...newData,
+        x: newData.x || 1920,
+        y: newData.y || 1250,
+        targetX: newData.x || 1920,
+        targetY: newData.y || 1250
+      };
+    } else {
+      const rp = stateStore.remotePlayers[id];
+      rp.targetX = newData.x !== undefined ? newData.x : rp.x;
+      rp.targetY = newData.y !== undefined ? newData.y : rp.y;
+      if (newData.facing) rp.facing = newData.facing;
+      if (newData.isMoving !== undefined) rp.isMoving = newData.isMoving;
+      if (newData.walkCycle !== undefined) rp.walkCycle = newData.walkCycle;
+      if (newData.nickname) rp.nickname = newData.nickname;
+      if (newData.solvedCount !== undefined) rp.solvedCount = newData.solvedCount;
+      if (newData.custom) rp.custom = newData.custom;
+      rp.lastSeen = Date.now();
+    }
+  }
+
   startListening() {
     this.syncRoomSettings();
-    // 0.25초 간격으로 현재 개설된 방의 모든 학생 아바타 수신 (교사/학생 공통)
+
+    if (this.eventSource) {
+      try { this.eventSource.close(); } catch (e) {}
+    }
+
+    const baseUrl = firebaseDbUrl.endsWith('/') ? firebaseDbUrl.slice(0, -1) : firebaseDbUrl;
+    const sseUrl = `${baseUrl}/rooms/${stateStore.roomId}/players.json`;
+
+    try {
+      this.eventSource = new EventSource(sseUrl);
+
+      this.eventSource.addEventListener('put', (e) => {
+        try {
+          const payload = JSON.parse(e.data);
+          const path = payload ? payload.path : null;
+          const data = payload ? payload.data : null;
+
+          if (path === '/' || path === '') {
+            if (data && typeof data === 'object') {
+              Object.keys(data).forEach(id => {
+                if (id !== stateStore.localPlayer.id) {
+                  this.updateRemotePlayerState(id, data[id]);
+                }
+              });
+            }
+          } else if (path) {
+            const playerId = path.replace('/', '');
+            if (playerId && playerId !== stateStore.localPlayer.id) {
+              if (data === null) {
+                delete stateStore.remotePlayers[playerId];
+              } else {
+                this.updateRemotePlayerState(playerId, data);
+              }
+            }
+          }
+        } catch (err) {}
+      });
+
+      this.eventSource.onerror = (err) => {};
+    } catch (err) {}
+
+    // 백업 폴링 (SSE 연결 대기 및 보조 동기화)
     setInterval(() => {
       if (!stateStore.roomId) return;
       fetch(this.getEndpoint())
@@ -368,25 +434,30 @@ class RealtimeSyncEngine {
           if (data && typeof data === 'object') {
             Object.keys(data).forEach(id => {
               if (id !== stateStore.localPlayer.id) {
-                stateStore.remotePlayers[id] = data[id];
+                this.updateRemotePlayerState(id, data[id]);
               }
             });
           }
         })
         .catch(err => {});
-    }, 250);
+    }, 1000);
 
-    // 5초 간격으로 방 설정(퀴즈 문제) 실시간 동기화 체크
+    // 5초 간격 방 설정 실시간 동기화
     setInterval(() => {
       this.syncRoomSettings();
     }, 5000);
   }
 
   broadcastLocalPlayer() {
-    if (!stateStore.roomId || Date.now() - this.lastSyncTime < 90) return;
+    if (!stateStore.roomId) return;
+    const p = stateStore.localPlayer;
+    const isMoving = p.isMoving;
+
+    // 이동 시 80ms, 정지 시 1000ms 간격으로 네트워크 대역폭 최적화
+    const interval = isMoving ? 80 : 1000;
+    if (Date.now() - this.lastSyncTime < interval) return;
     this.lastSyncTime = Date.now();
 
-    const p = stateStore.localPlayer;
     const pData = {
       id: p.id,
       x: Math.round(p.x),
@@ -1245,6 +1316,33 @@ document.addEventListener('DOMContentLoaded', () => {
       movePing.alpha -= 0.04;
       if (movePing.alpha <= 0) movePing = null;
     }
+
+    // 원격 학생 캐릭터들의 60FPS 버터처럼 부드러운 LERP 위치 보간 & 오래된 플레이어 자동 정리
+    const now = Date.now();
+    Object.keys(stateStore.remotePlayers).forEach(id => {
+      const rp = stateStore.remotePlayers[id];
+      if (now - (rp.lastSeen || 0) > 12000) {
+        delete stateStore.remotePlayers[id];
+        return;
+      }
+
+      if (rp.targetX !== undefined && rp.targetY !== undefined) {
+        const dx = rp.targetX - rp.x;
+        const dy = rp.targetY - rp.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist > 1) {
+          rp.x += dx * 0.3;
+          rp.y += dy * 0.3;
+          rp.isMoving = true;
+          rp.walkCycle = (rp.walkCycle || 0) + 0.25;
+        } else {
+          rp.x = rp.targetX;
+          rp.y = rp.targetY;
+          rp.isMoving = false;
+        }
+      }
+    });
 
     // 파이어베이스 실시간 브로드캐스트 수행
     realtimeSync.broadcastLocalPlayer();
