@@ -14,6 +14,14 @@
     <!-- 메인 게임 캔버스 -->
     <canvas id="game-canvas"></canvas>
 
+    <!-- 화면 상단 중앙 획득한 아이템/비석 인벤토리 바 -->
+    <div id="inventory-bar" class="inventory-bar">
+      <div class="inventory-title">🎒 획득한 비석 아이템:</div>
+      <div id="inventory-items-list" class="inventory-items-list">
+        <span class="empty-inv-msg">아직 획득한 아이템이 없습니다. 광야를 탐험해보세요!</span>
+      </div>
+    </div>
+
     <!-- 모바일 가상 조이스틱 컨트롤러 -->
     <div id="virtual-joystick" class="joystick-wrapper">
       <div class="joystick-base">
@@ -45,7 +53,8 @@
           <button id="btn-open-qr" class="drawer-btn">📱 QR 코드 크게 보기</button>
           <button id="btn-sound-toggle" class="drawer-btn">🎵 BGM: ON</button>
           <button id="btn-open-leaderboard" class="drawer-btn">🏆 탐험 현황</button>
-          <button id="btn-open-editor" class="drawer-btn teacher-only">✏️ 퀴즈&맵 편집기</button>
+          <button id="btn-open-firebase" class="drawer-btn">🔥 파이어베이스 클라우드 설정</button>
+          <button id="btn-open-editor" class="drawer-btn teacher-only">✏️ 방 개설 & 퀴즈 문제 편집기</button>
         </div>
       </div>
     </div>
@@ -59,18 +68,43 @@
         </div>
         <div style="display: flex; flex-direction: column; gap: 12px; margin: 20px 0;">
           <button id="btn-select-teacher" class="primary-btn" style="background: linear-gradient(135deg, #2563eb, #1d4ed8);">
-            👨‍🏫 교사 모드 (방 개설 & 문제 설정)
+            👨‍🏫 교사 모드 (새 방 개설 & 퀴즈/맵 설정)
           </button>
           <button id="btn-select-student" class="primary-btn" style="background: linear-gradient(135deg, #16a34a, #15803d);">
             🎒 학생 모드 (QR/방 코드 참전)
           </button>
         </div>
 
-        <!-- 교사 코드 입력 상자 (기본값: 1234) -->
         <div id="teacher-pass-box" style="display: none; padding: 14px; background: #fffbe0; border-radius: 12px; border: 2px solid #f59e0b; margin-top: 10px;">
           <label style="font-weight: bold; color: #b45309; display: block; margin-bottom: 6px;">🔒 교사 암호 코드 입력</label>
           <input type="password" id="input-teacher-pass" placeholder="암호 코드 입력 (기본: 1234)" value="1234" style="width: 80%; padding: 8px; border-radius: 8px; border: 1px solid #ccc; text-align: center; font-size: 16px;">
           <button id="btn-confirm-teacher-pass" class="primary-btn" style="margin-top: 10px; width: 80%; padding: 10px;">교사 인증 및 방 개설 🚀</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🔥 파이어베이스 클라우드 설정 모달 -->
+    <div id="firebase-config-modal" class="modal-overlay hidden">
+      <div class="customizer-card" style="max-width: 500px;">
+        <div class="customizer-header">
+          <h2>🔥 파이어베이스 클라우드 DB 연결</h2>
+          <p>구글 파이어베이스 키를 입력하시면 집/교회 어디서든 방 코드 하나로 자동 동기화됩니다.</p>
+        </div>
+        <div style="margin: 16px 0; display: flex; flex-direction: column; gap: 10px;">
+          <label style="font-weight: bold; color: #b45309;">1. Realtime Database URL</label>
+          <input type="text" id="fb-db-url" placeholder="https://your-app-default-rtdb.firebaseio.com/" style="padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
+
+          <label style="font-weight: bold; color: #b45309;">2. Firebase API Key</label>
+          <input type="text" id="fb-api-key" placeholder="AIzaSyB..." style="padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
+
+          <p style="font-size: 12px; color: #78716c; line-height: 1.4;">
+            * 파이어베이스 키가 없어도 무료 P2P 및 로컬 저장소로 바로 동작합니다.<br>
+            * 입력하신 키는 본인 브라우저에 안전하게 저장됩니다.
+          </p>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 14px;">
+          <button id="btn-save-firebase" class="primary-btn" style="flex: 1;">연동 저장하기 💾</button>
+          <button id="btn-close-firebase" class="drawer-btn" style="flex: 1;">닫기</button>
         </div>
       </div>
     </div>
@@ -105,39 +139,65 @@
       </div>
     </div>
 
-    <!-- ✏️ 교사 전용 퀴즈 & 맵 배경 편집기 모달 -->
+    <!-- ✏️ 교사 전용 퀴즈 & 맵 배경 편집기 모달 (자유 문항 추가/삭제, O/X & 선다형, 파일 업로드) -->
     <div id="editor-modal" class="modal-overlay hidden">
-      <div class="customizer-card" style="max-width: 600px; max-height: 85vh; overflow-y: auto;">
+      <div class="customizer-card" style="max-width: 620px; max-height: 88vh; overflow-y: auto;">
         <div class="customizer-header">
-          <h2>✏️ 교사 방 개설 & 퀴즈 문제 설정</h2>
-          <p>방에 적용할 십계명 퀴즈 질문과 맵 배경을 설정 후 개설을 완료하세요.</p>
+          <h2>✏️ 교사 방 개설 & 미션 퀴즈 설정</h2>
+          <p>새로운 방을 위한 맵 배경과 퀴즈 미션을 자유롭게 구성하세요.</p>
         </div>
 
         <div style="margin: 16px 0; display: flex; flex-direction: column; gap: 14px;">
-          <div class="opt-section">
-            <label style="font-weight: bold; color: #b45309;">🌄 맵 배경 이미지 지정</label>
-            <input type="text" id="editor-map-url" placeholder="맵 이미지 경로 또는 Data URL 입력" style="width: 100%; padding: 10px; border-radius: 8px; border: 1.5px solid #d97706;" value="./src/assets/map.jpg">
+          <!-- 맵 배경 업로드 / 지정 -->
+          <div class="opt-section" style="background: #fffdf0; padding: 12px; border-radius: 12px; border: 1.5px solid #f59e0b;">
+            <label style="font-weight: bold; color: #b45309;">🌄 맵 배경 이미지 업로드 및 지정</label>
+            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+              <input type="file" id="editor-map-file" accept="image/*" style="display: none;">
+              <button id="btn-upload-map-file" class="drawer-btn" style="background: #ffffff; border-color: #d97706; color: #b45309; width: 100%;">
+                📁 컴퓨터에서 맵 이미지 파일 선택하기
+              </button>
+            </div>
+            <input type="text" id="editor-map-url" placeholder="또는 이미지 경로/DataURL 직접 입력" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 13px;" value="./src/assets/map.jpg">
           </div>
 
+          <!-- 퀴즈 컨트롤 (추가 / 삭제 / 선택) -->
           <div class="opt-section">
-            <label style="font-weight: bold; color: #b45309;">📜 십계명 비석 퀴즈 수정 (1~10계명)</label>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+              <label style="font-weight: bold; color: #b45309; margin: 0;">📜 미션 퀴즈 문항 목록</label>
+              <div style="display: flex; gap: 6px;">
+                <button id="btn-load-cloud-quiz" class="tiny-btn" style="background: #0284c7; font-size: 12px; padding: 4px 8px;" title="파이어베이스 클라우드에 저장된 문제세트 불러오기">☁️ 클라우드 퀴즈 로드</button>
+                <button id="btn-add-quiz" class="tiny-btn" style="background: #16a34a; font-size: 12px; padding: 4px 8px;">➕ 새 문제 추가</button>
+                <button id="btn-delete-quiz" class="tiny-btn" style="background: #dc2626; font-size: 12px; padding: 4px 8px;">❌ 현재 문제 삭제</button>
+              </div>
+            </div>
+
             <select id="editor-cmd-select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1.5px solid #d97706; font-weight: bold;">
             </select>
             
-            <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
-              <label>질문 문구:</label>
+            <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 10px; background: #fdfaf3; padding: 14px; border-radius: 12px; border: 1px solid #e7e5e4;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <label style="font-weight: bold;">퀴즈 유형:</label>
+                <select id="editor-quiz-type" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc; font-weight: bold;">
+                  <option value="CHOICE">선다형 (2~4개 선택지)</option>
+                  <option value="OX">O / X 참거짓형</option>
+                </select>
+              </div>
+
+              <label style="font-weight: bold;">질문 문구:</label>
               <input type="text" id="editor-quiz-q" style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
 
-              <label>선택지 (1~4번):</label>
-              <input type="text" id="editor-quiz-opt0" placeholder="1번 선택지" style="padding: 6px; border-radius: 6px; border: 1px solid #ccc;">
-              <input type="text" id="editor-quiz-opt1" placeholder="2번 선택지" style="padding: 6px; border-radius: 6px; border: 1px solid #ccc;">
-              <input type="text" id="editor-quiz-opt2" placeholder="3번 선택지" style="padding: 6px; border-radius: 6px; border: 1px solid #ccc;">
-              <input type="text" id="editor-quiz-opt3" placeholder="4번 선택지" style="padding: 6px; border-radius: 6px; border: 1px solid #ccc;">
+              <div id="editor-options-container" style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="font-weight: bold;">선택지 보기:</label>
+                <input type="text" id="editor-quiz-opt0" placeholder="1번 선택지" style="padding: 6px; border-radius: 6px; border: 1px solid #ccc;">
+                <input type="text" id="editor-quiz-opt1" placeholder="2번 선택지" style="padding: 6px; border-radius: 6px; border: 1px solid #ccc;">
+                <input type="text" id="editor-quiz-opt2" placeholder="3번 선택지 (선택사항)" style="padding: 6px; border-radius: 6px; border: 1px solid #ccc;">
+                <input type="text" id="editor-quiz-opt3" placeholder="4번 선택지 (선택사항)" style="padding: 6px; border-radius: 6px; border: 1px solid #ccc;">
+              </div>
 
-              <label>정답 번호 (1~4 중 선택):</label>
-              <select id="editor-quiz-ans" style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
-                <option value="0">1번 정답</option>
-                <option value="1">2번 정답</option>
+              <label style="font-weight: bold;">정답 지정:</label>
+              <select id="editor-quiz-ans" style="padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-weight: bold;">
+                <option value="0">1번 정답 (또나 O)</option>
+                <option value="1">2번 정답 (또는 X)</option>
                 <option value="2">3번 정답</option>
                 <option value="3">4번 정답</option>
               </select>
@@ -145,9 +205,9 @@
           </div>
         </div>
 
-        <div style="display: flex; gap: 10px; margin-top: 12px;">
-          <button id="btn-save-editor" class="primary-btn" style="flex: 1;">방 문제 설정 완료 및 QR 생성 🚀</button>
-          <button id="btn-close-editor" class="drawer-btn" style="flex: 1;">취소</button>
+        <div style="display: flex; gap: 10px; margin-top: 14px;">
+          <button id="btn-save-editor" class="primary-btn" style="flex: 1;">방 설정 완료 & QR 개설 🚀</button>
+          <button id="btn-close-editor" class="drawer-btn" style="flex: 1;">닫기</button>
         </div>
       </div>
     </div>
