@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>십계명 메타버스 - 시내산 광야 대탐험 v2</title>
+  <link rel="stylesheet" href="./src/style.css">
+  <!-- WebRTC PeerJS & QRCode CDN -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" defer></script>
+</head>
+<body>
+  <div id="game-container">
+    <!-- 메인 게임 캔버스 -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- 모바일 가상 조이스틱 컨트롤러 -->
+    <div id="virtual-joystick" class="joystick-wrapper">
+      <div class="joystick-base">
+        <div id="joystick-stick" class="joystick-stick"></div>
+      </div>
+    </div>
+
+    <!-- 교사 방 개설 완료 후 화면 상단 구석 상시 플로팅 QR 뱃지 -->
+    <div id="floating-qr-badge" class="floating-qr-badge hidden">
+      <div class="floating-qr-header">
+        <span>📱 학생 입장 QR</span>
+        <button id="btn-toggle-qr-size" class="tiny-btn">확대</button>
+      </div>
+      <div id="floating-qrcode-box"></div>
+      <div class="floating-room-info">
+        방 코드: <strong id="floating-room-code">-</strong>
+      </div>
+    </div>
+
+    <!-- 평소에는 숨겨져 있고 필요할 때 슥 당겨 쓰는 슬라이드 메뉴 서랍 (Sliding Drawer) -->
+    <div id="slide-drawer" class="slide-drawer collapsed">
+      <button id="btn-drawer-toggle" class="drawer-toggle-btn" title="메뉴 열기/닫기">
+        <span class="toggle-icon">◀</span>
+      </button>
+      <div class="drawer-content">
+        <h3>🧭 메타버스 컨트롤</h3>
+        <div class="drawer-buttons-grid">
+          <button id="btn-room-badge" class="drawer-btn">🔑 방 코드: <span id="room-code-display">생성 중...</span></button>
+          <button id="btn-open-qr" class="drawer-btn">📱 QR 코드 크게 보기</button>
+          <button id="btn-sound-toggle" class="drawer-btn">🎵 BGM: ON</button>
+          <button id="btn-open-leaderboard" class="drawer-btn">🏆 탐험 현황</button>
+          <button id="btn-open-editor" class="drawer-btn teacher-only">✏️ 퀴즈&맵 편집기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 0. 최초 진입 선택 & 교사 암호 인증 모달 -->
+    <div id="entry-role-modal" class="modal-overlay">
+      <div class="customizer-card" style="max-width: 460px; text-align: center;">
+        <div class="customizer-header">
+          <h2>⛪ 십계명 메타버스 시내산 탐험</h2>
+          <p>접속하실 역할을 선택해주세요.</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px; margin: 20px 0;">
+          <button id="btn-select-teacher" class="primary-btn" style="background: linear-gradient(135deg, #2563eb, #1d4ed8);">
+            👨‍🏫 교사 모드 (방 개설 & 문제 설정)
+          </button>
+          <button id="btn-select-student" class="primary-btn" style="background: linear-gradient(135deg, #16a34a, #15803d);">
+            🎒 학생 모드 (QR/방 코드 참전)
+          </button>
+        </div>
+
+        <!-- 교사 코드 입력 상자 (기본값: 1234) -->
+        <div id="teacher-pass-box" style="display: none; padding: 14px; background: #fffbe0; border-radius: 12px; border: 2px solid #f59e0b; margin-top: 10px;">
+          <label style="font-weight: bold; color: #b45309; display: block; margin-bottom: 6px;">🔒 교사 암호 코드 입력</label>
+          <input type="password" id="input-teacher-pass" placeholder="암호 코드 입력 (기본: 1234)" value="1234" style="width: 80%; padding: 8px; border-radius: 8px; border: 1px solid #ccc; text-align: center; font-size: 16px;">
+          <button id="btn-confirm-teacher-pass" class="primary-btn" style="margin-top: 10px; width: 80%; padding: 10px;">교사 인증 및 방 개설 🚀</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR 코드 모달 -->
+    <div id="qr-modal" class="modal-overlay hidden">
+      <div class="customizer-card" style="max-width: 440px; text-align: center;">
+        <div class="customizer-header">
+          <h2>📱 스마트폰 QR 스캔 자동 입장</h2>
+          <p>카메라로 아래 QR을 촬영하면 방 코드 입력 없이 즉시 같은 시내산 광야 맵으로 입장합니다.</p>
+        </div>
+        <div style="margin: 18px auto; padding: 16px; background: #ffffff; display: inline-block; border-radius: 16px; border: 3px solid #d97706;">
+          <div id="qrcode-box"></div>
+        </div>
+        <div style="font-weight: bold; color: #b45309; font-size: 16px; margin-bottom: 14px;">
+          방 코드: <span id="modal-room-code" style="color: #2563eb; font-size: 20px;">-</span>
+        </div>
+        <button id="btn-close-qr" class="primary-btn">닫기</button>
+      </div>
+    </div>
+
+    <!-- 🏆 탐험 현황 / 리더보드 모달 -->
+    <div id="leaderboard-modal" class="modal-overlay hidden">
+      <div class="customizer-card" style="max-width: 500px;">
+        <div class="customizer-header">
+          <h2>🏆 시내산 탐험가 참여 현황</h2>
+          <p>실시간 접속 플레이어들의 십계명 비석 수집 내역입니다.</p>
+        </div>
+        <div id="leaderboard-list-box" style="margin: 16px 0; max-height: 260px; overflow-y: auto;">
+        </div>
+        <button id="btn-close-leaderboard" class="drawer-btn" style="width: 100%;">닫기</button>
+      </div>
+    </div>
+
+    <!-- ✏️ 교사 전용 퀴즈 & 맵 배경 편집기 모달 -->
+    <div id="editor-modal" class="modal-overlay hidden">
+      <div class="customizer-card" style="max-width: 600px; max-height: 85vh; overflow-y: auto;">
+        <div class="customizer-header">
+          <h2>✏️ 교사 방 개설 & 퀴즈 문제 설정</h2>
+          <p>방에 적용할 십계명 퀴즈 질문과 맵 배경을 설정 후 개설을 완료하세요.</p>
+        </div>
+
+        <div style="margin: 16px 0; display: flex; flex-direction: column; gap: 14px;">
+          <div class="opt-section">
+            <label style="font-weight: bold; color: #b45309;">🌄 맵 배경 이미지 지정</label>
+            <input type="text" id="editor-map-url" placeholder="맵 이미지 경로 또는 Data URL 입력" style="width: 100%; padding: 10px; border-radius: 8px; border: 1.5px solid #d97706;" value="./src/assets/map.jpg">
+          </div>
+
+          <div class="opt-section">
+            <label style="font-weight: bold; color: #b45309;">📜 십계명 비석 퀴즈 수정 (1~10계명)</label>
+            <select id="editor-cmd-select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1.5px solid #d97706; font-weight: bold;">
+            </select>
+            
+            <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+              <label>질문 문구:</label>
+              <input type="text" id="editor-quiz-q" style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+
+              <label>선택지 (1~4번):</label>
+              <input type="text" id="editor-quiz-opt0" placeholder="1번 선택지" style="padding: 6px; border-radius: 6px; border: 1px solid #ccc;">
+              <input type="text" id="editor-quiz-opt1" placeholder="2번 선택지" style="padding: 6px; border-radius: 6px; border: 1px solid #ccc;">
+              <input type="text" id="editor-quiz-opt2" placeholder="3번 선택지" style="padding: 6px; border-radius: 6px; border: 1px solid #ccc;">
+              <input type="text" id="editor-quiz-opt3" placeholder="4번 선택지" style="padding: 6px; border-radius: 6px; border: 1px solid #ccc;">
+
+              <label>정답 번호 (1~4 중 선택):</label>
+              <select id="editor-quiz-ans" style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                <option value="0">1번 정답</option>
+                <option value="1">2번 정답</option>
+                <option value="2">3번 정답</option>
+                <option value="3">4번 정답</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 12px;">
+          <button id="btn-save-editor" class="primary-btn" style="flex: 1;">방 문제 설정 완료 및 QR 생성 🚀</button>
+          <button id="btn-close-editor" class="drawer-btn" style="flex: 1;">취소</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 모바일 세로 모드 차단 오버레이 -->
+    <div id="orientation-overlay" class="orientation-overlay hidden">
+      <div class="orientation-box">
+        <div class="phone-icon">📱</div>
+        <h2>화면을 가로로 돌려주세요!</h2>
+        <p>시내산 광야 메타버스는 가로 모드(Landscape)에 최적화되어 있습니다.</p>
+      </div>
+    </div>
+
+    <!-- 아바타 커스터마이징 모달 -->
+    <div id="avatar-modal" class="modal-overlay hidden">
+      <div class="customizer-card">
+        <div class="customizer-header">
+          <h2>🐾 나만의 동물 탐험가 아바타 만들기</h2>
+          <p>시내산 광야를 함께 탐험할 동물 캐릭터를 꾸며보세요!</p>
+        </div>
+
+        <div class="customizer-layout">
+          <div class="preview-panel">
+            <div class="avatar-canvas-wrapper">
+              <canvas id="avatar-preview-canvas" width="220" height="260"></canvas>
+            </div>
+            <div class="nickname-input-box">
+              <label for="input-nickname">내 닉네임</label>
+              <input type="text" id="input-nickname" maxlength="8" placeholder="탐험가 이름 입력" value="용맹한 사자">
+            </div>
+          </div>
+
+          <div class="options-panel">
+            <div class="opt-section">
+              <label>동물 탐험가 얼굴 선택 (8종)</label>
+              <div id="animal-options-grid" class="badge-grid"></div>
+            </div>
+
+            <div class="opt-section">
+              <label>탐험 의상(튜닉) 색상 선택</label>
+              <div id="color-options-grid" class="color-grid"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="customizer-footer">
+          <button id="btn-confirm-avatar" class="primary-btn">시내산 광야로 출발! 🚀</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./src/main.js" defer></script>
+</body>
+</html>
