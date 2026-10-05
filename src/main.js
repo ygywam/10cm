@@ -38,7 +38,7 @@ class StateStore {
     const urlParams = new URLSearchParams(window.location.search);
     this.hasRoomQuery = !!urlParams.get('room');
     this.role = urlParams.get('role') === 'teacher' ? 'TEACHER' : (this.hasRoomQuery ? 'STUDENT' : 'UNSET');
-    this.roomId = urlParams.get('room') || 'SINAI-' + Math.floor(1000 + Math.random() * 9000);
+    this.roomId = urlParams.get('room') || Math.floor(1000 + Math.random() * 9000).toString();
     this.localPlayer = {
       id: 'p_' + Math.random().toString(36).substr(2, 6),
       x: 1920,
@@ -755,7 +755,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnSelectStudent.onclick = () => {
       stateStore.role = 'STUDENT';
-      stateStore.roomId = prompt('입장할 방 코드를 입력하세요 (예: SINAI-8291):') || 'SINAI-8291';
+      stateStore.roomId = prompt('입장할 방 코드를 입력하세요 (예: 8291):') || '8291';
       entryRoleModal.classList.add('hidden');
       avatarModal.classList.remove('hidden');
       updateRoomUI();
@@ -763,18 +763,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnConfirmTeacherPass.onclick = () => {
       const pass = inputTeacherPass.value.trim();
-      if (pass === '1234' || pass.length > 0) {
+      if (pass === '1234') {
         stateStore.role = 'TEACHER';
         stateStore.localPlayer.isTeacher = true;
-        stateStore.roomId = 'SINAI-' + Math.floor(1000 + Math.random() * 9000);
+        stateStore.roomId = Math.floor(1000 + Math.random() * 9000).toString();
         entryRoleModal.classList.add('hidden');
 
-        // 교사 캐릭터 닉네임 기본값 입력 후 아바타 선택창 오픈
-        const nickInput = document.getElementById('input-nickname');
-        if (nickInput) nickInput.value = '👑 모세 선생님';
-        if (avatarModal) avatarModal.classList.remove('hidden');
-
-        updateRoomUI();
+        // 교사 로그인 성공 직후 아바타가 아닌, 퀴즈/맵 편집기 모달을 가장 먼저 노출
+        if (typeof initEditorUI === 'function') initEditorUI();
+        if (editorModal) editorModal.classList.remove('hidden');
       } else {
         alert('❌ 교사 암호 코드가 바르지 않습니다!');
       }
@@ -803,9 +800,18 @@ document.addEventListener('DOMContentLoaded', () => {
       new QRCode(floatingQrcodeBox, { text: joinUrl, width: 100, height: 100 });
     }
 
-    // 교사 모드 접속 시 화면 상단 구석 플로팅 QR 뱃지 상시 활성화
-    if (stateStore.role === 'TEACHER' && floatingQrBadge) {
-      floatingQrBadge.classList.remove('hidden');
+    // 역할별 메뉴 분리 처리
+    const teacherBtns = document.querySelectorAll('.teacher-only');
+    const btnFirebase = document.getElementById('btn-open-firebase');
+    if (stateStore.role === 'STUDENT') {
+      teacherBtns.forEach(btn => btn.style.display = 'none');
+      if (btnFirebase) btnFirebase.style.display = 'none';
+      if (floatingQrBadge) floatingQrBadge.classList.add('hidden');
+    } else {
+      teacherBtns.forEach(btn => btn.style.display = '');
+      if (btnFirebase) btnFirebase.style.display = '';
+      // 교사 모드 접속 시 화면 상단 구석 플로팅 QR 뱃지 상시 활성화
+      if (floatingQrBadge) floatingQrBadge.classList.remove('hidden');
     }
   }
 
@@ -962,12 +968,13 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify(settingsPayload)
       }).catch(err => {});
 
-      alert(`🎉 방 [${stateStore.roomId}] 문제 설정이 저장되고 파이어베이스 클라우드에 업로드되었습니다!\n화면 상단 구석의 QR을 이용해 학생들을 초빙하세요.`);
+      alert(`🎉 방 설정 및 문제가 저장되었습니다!\n이제 선생님의 메타버스 탐험가 캐릭터를 꾸며주세요.`);
       editorModal.classList.add('hidden');
 
-      if (stateStore.role === 'TEACHER' && floatingQrBadge) {
-        floatingQrBadge.classList.remove('hidden');
-      }
+      // 편집기 설정 완료 후 교사용 아바타 생성창 오픈
+      const nickInput = document.getElementById('input-nickname');
+      if (nickInput) nickInput.value = '👑 모세 선생님';
+      if (avatarModal) avatarModal.classList.remove('hidden');
     };
   }
 
@@ -1200,8 +1207,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (stateStore.role === 'TEACHER') {
-      initEditorUI();
-      if (editorModal) editorModal.classList.remove('hidden');
+      updateRoomUI(); // 아바타 생성까지 모두 완료된 후 방 UI 및 QR 활성화
     }
 
     resizeCanvas();
