@@ -43,37 +43,21 @@ body, html {
   height: 100%;
 }
 
-/* 화면 상단 획득한 아이템 인벤토리 바 */
-.inventory-bar {
-  position: absolute;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 90;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(8px);
-  border: 2px solid var(--primary-brown);
-  border-radius: 20px;
-  padding: 8px 18px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
-  max-width: 90vw;
-  overflow-x: auto;
+/* 슬라이드 서랍 내부 획득한 비석 아이템 인벤토리 */
+.drawer-inventory-box {
+  background: #fffdf0;
+  border: 1.5px solid #f59e0b;
+  border-radius: 12px;
+  padding: 10px;
+  margin-top: 12px;
 }
 
-.inventory-title {
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--primary-brown);
-  white-space: nowrap;
-}
-
-.inventory-items-list {
+.drawer-inventory-list {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
+  max-height: 140px;
+  overflow-y: auto;
 }
 
 .empty-inv-msg {
@@ -505,4 +489,32 @@ body, html {
   .customizer-layout {
     flex-direction: column;
   }
+}
+
+/* 선생님께 10계명 전달 상호작용 버튼 스타일 */
+.submit-to-teacher-banner {
+  position: fixed;
+  bottom: 110px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  animation: pulseTeacherBtn 1.2s infinite alternate ease-in-out;
+}
+
+.submit-teacher-btn {
+  background: linear-gradient(135deg, #f59e0b, #b45309);
+  color: #ffffff;
+  border: 3px solid #ffffff;
+  border-radius: 30px;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.55);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+@keyframes pulseTeacherBtn {
+  0% { transform: translateX(-50%) scale(0.95); }
+  100% { transform: translateX(-50%) scale(1.05); }
 }

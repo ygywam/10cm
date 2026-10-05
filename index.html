@@ -14,14 +14,6 @@
     <!-- 메인 게임 캔버스 -->
     <canvas id="game-canvas"></canvas>
 
-    <!-- 화면 상단 중앙 획득한 아이템/비석 인벤토리 바 -->
-    <div id="inventory-bar" class="inventory-bar">
-      <div class="inventory-title">🎒 획득한 비석 아이템:</div>
-      <div id="inventory-items-list" class="inventory-items-list">
-        <span class="empty-inv-msg">아직 획득한 아이템이 없습니다. 광야를 탐험해보세요!</span>
-      </div>
-    </div>
-
     <!-- 모바일 가상 조이스틱 컨트롤러 -->
     <div id="virtual-joystick" class="joystick-wrapper">
       <div class="joystick-base">
@@ -55,6 +47,14 @@
           <button id="btn-open-leaderboard" class="drawer-btn">🏆 탐험 현황</button>
           <button id="btn-open-firebase" class="drawer-btn">🔥 파이어베이스 클라우드 설정</button>
           <button id="btn-open-editor" class="drawer-btn teacher-only">✏️ 방 개설 & 퀴즈 문제 편집기</button>
+        </div>
+
+        <!-- 🎒 획득한 비석 아이템 인벤토리 (우측 토글 서랍 내부) -->
+        <div class="drawer-inventory-box">
+          <h4 style="font-size: 13px; color: #78350f; margin-bottom: 6px; font-weight: 800;">🎒 획득한 비석 아이템</h4>
+          <div id="inventory-items-list" class="drawer-inventory-list">
+            <span class="empty-inv-msg">아직 획득한 아이템이 없습니다. 광야를 탐험해보세요!</span>
+          </div>
         </div>
       </div>
     </div>
@@ -107,6 +107,11 @@
           <button id="btn-close-firebase" class="drawer-btn" style="flex: 1;">닫기</button>
         </div>
       </div>
+    <!-- 선생님께 10계명 전달하기 플로팅 상호작용 버튼 -->
+    <div id="submit-to-teacher-banner" class="submit-to-teacher-banner hidden">
+      <button id="btn-submit-to-teacher" class="submit-teacher-btn">
+        👑 <span id="teacher-target-name">선생님</span>께 10계명 비석 전달하기! 🎁
+      </button>
     </div>
 
     <!-- QR 코드 모달 -->

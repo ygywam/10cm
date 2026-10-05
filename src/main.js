@@ -177,23 +177,45 @@ function drawAnimalJointAvatar(ctx, {
   ctx.textBaseline = 'middle';
   ctx.fillText(animalEmoji, 0, headY);
 
+  // 교사(Teacher Admin) 전용 황금 빛 오라 링
+  const isTeacherAvatar = (nickname && (nickname.includes('👑') || nickname.includes('선생님') || nickname.includes('관리자')));
+  if (isTeacherAvatar) {
+    ctx.save();
+    const auraPulse = Math.sin(Date.now() * 0.006) * 5;
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.ellipse(0, 4, 30 + auraPulse, 14 + auraPulse / 2, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(245, 158, 11, 0.22)';
+    ctx.fill();
+    ctx.restore();
+  }
+
   ctx.restore();
 
   if (nickname) {
+    const isTeacherTag = (nickname && (nickname.includes('👑') || nickname.includes('선생님') || nickname.includes('관리자')));
     ctx.font = 'bold 13px sans-serif';
     ctx.textAlign = 'center';
     const textWidth = ctx.measureText(nickname).width;
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
-    ctx.strokeStyle = tunicColor;
-    ctx.lineWidth = 2.2;
+    ctx.fillStyle = isTeacherTag ? 'rgba(254, 243, 199, 0.96)' : 'rgba(255, 255, 255, 0.92)';
+    ctx.strokeStyle = isTeacherTag ? '#d97706' : tunicColor;
+    ctx.lineWidth = isTeacherTag ? 3.0 : 2.2;
     ctx.beginPath();
     ctx.roundRect(-textWidth / 2 - 8, -82 - bob, textWidth + 16, 22, 11);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = '#1c1917';
+    ctx.fillStyle = isTeacherTag ? '#78350f' : '#1c1917';
     ctx.fillText(nickname, 0, -68 - bob);
+
+    if (isTeacherTag) {
+      ctx.font = '18px sans-serif';
+      ctx.fillText('👑', 0, -96 - bob);
+    }
   }
 
   ctx.restore();
@@ -743,11 +765,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const pass = inputTeacherPass.value.trim();
       if (pass === '1234' || pass.length > 0) {
         stateStore.role = 'TEACHER';
+        stateStore.localPlayer.isTeacher = true;
         stateStore.roomId = 'SINAI-' + Math.floor(1000 + Math.random() * 9000);
         entryRoleModal.classList.add('hidden');
 
-        initEditorUI();
-        editorModal.classList.remove('hidden');
+        // 교사 캐릭터 닉네임 기본값 입력 후 아바타 선택창 오픈
+        const nickInput = document.getElementById('input-nickname');
+        if (nickInput) nickInput.value = '👑 모세 선생님';
+        if (avatarModal) avatarModal.classList.remove('hidden');
+
         updateRoomUI();
       } else {
         alert('❌ 교사 암호 코드가 바르지 않습니다!');
@@ -1110,7 +1136,16 @@ document.addEventListener('DOMContentLoaded', () => {
   new AvatarCustomizer((nickname, custom) => {
     stateStore.localPlayer.nickname = nickname;
     stateStore.localPlayer.custom = custom;
-    if (avatarModal) avatarModal.style.display = 'none';
+    if (avatarModal) {
+      avatarModal.style.display = 'none';
+      avatarModal.classList.add('hidden');
+    }
+
+    if (stateStore.role === 'TEACHER') {
+      initEditorUI();
+      if (editorModal) editorModal.classList.remove('hidden');
+    }
+
     resizeCanvas();
     checkOrientation();
   });
@@ -1343,6 +1378,46 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     });
+
+    // 학생이 교사(선생님) 캐릭터 근처로 다가왔을 때 10계명 전달 버튼 상호작용
+    const submitBanner = document.getElementById('submit-to-teacher-banner');
+    const teacherTargetName = document.getElementById('teacher-target-name');
+    const btnSubmitToTeacher = document.getElementById('btn-submit-to-teacher');
+
+    if (stateStore.role === 'STUDENT') {
+      const teacherPlayer = Object.values(stateStore.remotePlayers).find(p => p.nickname && (p.nickname.includes('👑') || p.nickname.includes('선생님') || p.nickname.includes('관리자')));
+
+      if (teacherPlayer) {
+        const dist = Math.hypot(stateStore.localPlayer.x - teacherPlayer.x, stateStore.localPlayer.y - teacherPlayer.y);
+        if (dist < 130) {
+          if (submitBanner) submitBanner.classList.remove('hidden');
+          if (teacherTargetName) teacherTargetName.textContent = teacherPlayer.nickname;
+
+          if (btnSubmitToTeacher) {
+            btnSubmitToTeacher.onclick = () => {
+              soundEngine.playSuccessFanfare();
+              alert(`🎉 [${teacherPlayer.nickname}]님께 십계명 비석을 성공적으로 전달했습니다!\n성실하게 미션을 완수한 당신을 축복합니다!`);
+              if (submitBanner) submitBanner.classList.add('hidden');
+
+              const subUrl = `${firebaseDbUrl.endsWith('/') ? firebaseDbUrl.slice(0, -1) : firebaseDbUrl}/rooms/${stateStore.roomId}/submissions/${stateStore.localPlayer.id}.json`;
+              fetch(subUrl, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  nickname: stateStore.localPlayer.nickname,
+                  solvedCount: stateStore.localPlayer.solvedCount,
+                  submittedAt: Date.now()
+                })
+              }).catch(err => {});
+            };
+          }
+        } else {
+          if (submitBanner) submitBanner.classList.add('hidden');
+        }
+      } else {
+        if (submitBanner) submitBanner.classList.add('hidden');
+      }
+    }
 
     // 파이어베이스 실시간 브로드캐스트 수행
     realtimeSync.broadcastLocalPlayer();
